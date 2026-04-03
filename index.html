@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>工具集 · 云标签 & 文件传输</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #f1f5f9;
+            min-height: 100vh;
+            padding: 24px 20px;
+        }
+
+        /* 主容器 */
+        .app-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* 工具选择导航栏 */
+        .tools-nav {
+            background: white;
+            border-radius: 60px;
+            padding: 8px 20px;
+            margin-bottom: 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+            border: 1px solid #e2edf2;
+        }
+        .logo {
+            font-size: 1.4rem;
+            font-weight: 650;
+            background: linear-gradient(135deg, #1f5e7e, #2c8eb3);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+        }
+        .tool-buttons {
+            display: flex;
+            gap: 12px;
+        }
+        .tool-btn {
+            background: #eef3fc;
+            border: none;
+            padding: 8px 24px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: 0.2s;
+            color: #2c6e8f;
+        }
+        .tool-btn.active {
+            background: #2c7da0;
+            color: white;
+            box-shadow: 0 2px 8px rgba(44,125,160,0.3);
+        }
+        .tool-btn:hover:not(.active) {
+            background: #e0e9f2;
+            transform: translateY(-1px);
+        }
+
+        /* 工具面板通用样式 */
+        .tool-panel {
+            display: none;
+            animation: fadeIn 0.2s ease;
+        }
+        .tool-panel.active-panel {
+            display: block;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+
+        /* ========= 云标签管理 (便签) 样式 ========= */
+        .create-card {
+            background: #ffffff;
+            border-radius: 28px;
+            padding: 24px 28px;
+            margin-bottom: 32px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.03);
+            border: 1px solid #eef2f8;
+        }
+        .create-card h2 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            color: #1f4662;
+            margin-bottom: 20px;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        .input-group label {
+            font-weight: 500;
+            display: block;
+            margin-bottom: 8px;
+            color: #2c5a74;
+        }
+        .input-group input, .input-group textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #cfdfed;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            transition: 0.2s;
+            font-family: inherit;
+            background: #fefefe;
+        }
+        .input-group input:focus, .input-group textarea:focus {
+            outline: none;
+            border-color: #2c7da0;
+            box-shadow: 0 0 0 3px rgba(44,125,160,0.1);
+        }
+        .btn-save {
+            background: #2c7da0;
+            color: white;
+            border: none;
+            padding: 10px 28px;
+            border-radius: 40px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .notes-section {
+            background: white;
+            border-radius: 28px;
+            border: 1px solid #eef2f8;
+            overflow: hidden;
+        }
+        .notes-header {
+            padding: 18px 24px;
+            border-bottom: 1px solid #eef2f6;
+            font-weight: 600;
+            font-size: 1.2rem;
+            color: #1f3f54;
+        }
+        .note-item {
+            border-bottom: 1px solid #eff3f8;
+            padding: 18px 24px;
+            transition: background 0.15s;
+        }
+        .note-item:hover {
+            background: #fafdff;
+        }
+        .note-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #1f4662;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        .note-preview {
+            font-size: 0.85rem;
+            color: #4c6f8c;
+            margin-bottom: 12px;
+            word-break: break-word;
+            white-space: pre-wrap;
+            max-height: 60px;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+        .note-meta {
+            font-size: 0.7rem;
+            color: #8aa4c0;
+            margin-bottom: 12px;
+        }
+        .note-actions button {
+            background: transparent;
+            border: 1px solid #cbdde9;
+            padding: 5px 16px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            margin-right: 10px;
+            transition: 0.2s;
+        }
+        .detail-btn:hover {
+            background: #eef3fc;
+        }
+        .delete-note-btn:hover {
+            background: #fee9e6;
+            border-color: #e2a38a;
+            color: #c2410c;
+        }
+        .empty-notes {
+            text-align: center;
+            padding: 48px 20px;
+            color: #90a9c2;
+        }
+
+        /* ========= 文件传输管理 样式 ========= */
+        .upload-card {
+            background: white;
+            border-radius: 28px;
+            padding: 24px 28px;
+            margin-bottom: 32px;
+            border: 1px solid #eef2f8;
+        }
+        .drag-area {
+            border: 2px dashed #cbdde9;
+            background: #fafdff;
+            border-radius: 24px;
+            padding: 32px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-bottom: 24px;
+        }
+        .drag-area.dragover {
+            border-color: #2c7da0;
+            background: #eff7fe;
+        }
+        .file-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .chip {
+            background: #f0f4fa;
+            border-radius: 40px;
+            padding: 5px 14px;
+            font-size: 0.8rem;
+        }
+        .file-list-card {
+            background: white;
+            border-radius: 28px;
+            border: 1px solid #eef2f8;
+            overflow: hidden;
+        }
+        .list-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            padding: 16px 24px;
+            border-bottom: 1px solid #eef2f6;
+            gap: 12px;
+        }
+        .toolbar-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .batch-btn {
+            background: #ecf3f9;
+            border: none;
+            padding: 5px 14px;
+            border-radius: 32px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            display: none;
+        }
+        .batch-btn.show {
+            display: inline-block;
+        }
+        .select-all-wrapper {
+            background: #f8fafc;
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+        }
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 14px 20px;
+            border-bottom: 1px solid #eff3f8;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .file-info {
+            flex: 1;
+            min-width: 150px;
+        }
+        .file-name {
+            font-weight: 600;
+            word-break: break-all;
+        }
+        .file-meta {
+            font-size: 0.7rem;
+            color: #7b95b0;
+        }
+        .small-btn {
+            background: #eef3fc;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            cursor: pointer;
+        }
+        .delete-btn {
+            background: #feece7;
+            color: #c2410c;
+        }
+        .toast-msg {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: #1f5e7e;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 60px;
+            font-size: 0.85rem;
+            z-index: 1500;
+            display: none;
+        }
+        .preview-popup {
+            position: fixed;
+            background: rgba(255,255,255,0.98);
+            backdrop-filter: blur(12px);
+            border-radius: 20px;
+            padding: 12px;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.2);
+            max-width: 300px;
+            max-height: 260px;
+            overflow: auto;
+            display: none;
+            z-index: 1200;
+            pointer-events: none;
+            font-size: 0.75rem;
+        }
+        @media (max-width: 650px) {
+            .tools-nav { flex-direction: column; align-items: stretch; border-radius: 28px; }
+            .tool-buttons { justify-content: center; }
+        }
+    </style>
+    <!-- JSZip 用于批量打包下载 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+<div class="app-container">
+    <!-- 顶部工具导航栏 -->
+    <div class="tools-nav">
+        <div class="logo">🛠️ 效率工具集</div>
+        <div class="tool-buttons">
+            <button class="tool-btn active" data-tool="notes">📝 云标签管理</button>
+            <button class="tool-btn" data-tool="files">📁 文件传输管理</button>
+        </div>
+    </div>
+
+    <!-- 云标签管理面板 (便签系统) -->
+    <div id="notesPanel" class="tool-panel active-panel">
+        <div class="create-card">
+            <h2>📌 新建便签</h2>
+            <div class="input-group">
+                <label>标题</label>
+                <input type="text" id="noteTitle" placeholder="例如：工作灵感 / 直播链接" maxlength="120">
+            </div>
+            <div class="input-group">
+                <label>内容</label>
+                <textarea id="noteContent" rows="3" placeholder="写下你的内容... 支持链接、文本等"></textarea>
+            </div>
+            <button class="btn-save" id="saveNoteBtn">💾 保存便签</button>
+        </div>
+        <div class="notes-section">
+            <div class="notes-header">📋 我的便签</div>
+            <ul id="notesList" style="list-style: none;"></ul>
+        </div>
+    </div>
+
+    <!-- 文件传输管理面板 -->
+    <div id="filesPanel" class="tool-panel">
+        <div class="upload-card">
+            <div class="drag-area" id="dragArea">
+                <p>✨ 拖拽文件到此处 或 点击选择文件</p>
+                <p style="font-size:0.75rem; margin-top:6px;">支持多文件 · 数据保存在浏览器中</p>
+            </div>
+            <div style="display: flex; gap:12px; flex-wrap:wrap; margin-bottom:16px;">
+                <label class="btn-file" style="background:#eef3fc; padding:8px 20px; border-radius:40px; cursor:pointer;">📎 选择文件</label>
+                <input type="file" id="multiFileInput" multiple style="display: none;">
+                <button class="btn-primary" id="startUploadBtn" style="background:#2c7da0; color:white; border:none; padding:8px 24px; border-radius:40px;">🚀 开始上传</button>
+            </div>
+            <div id="selectedBox" style="display:none; background:#f8fafd; border-radius:20px; padding:12px;">
+                <strong>已选择文件：</strong>
+                <div class="file-chips" id="fileChips"></div>
+            </div>
+        </div>
+        <div class="file-list-card">
+            <div class="list-toolbar">
+                <h3 style="margin:0;">📂 文件列表</h3>
+                <div class="toolbar-actions">
+                    <span class="selection-badge" id="selectionCountBadge" style="display:none; background:#eef2fa; padding:4px 12px; border-radius:40px;"></span>
+                    <button class="batch-btn" id="clearSelectionBtn">清除</button>
+                    <button class="batch-btn batch-download" id="batchDownloadBtn">📥 下载选中</button>
+                    <button class="batch-btn batch-delete" id="batchDeleteBtn">🗑️ 删除选中</button>
+                    <div class="select-all-wrapper"><input type="checkbox" id="selectAllCheckbox"> <label>全选</label></div>
+                </div>
+            </div>
+            <ul class="file-list" id="fileListContainer" style="list-style: none;"></ul>
+        </div>
+    </div>
+</div>
+<div id="toastMsg" class="toast-msg"></div>
+<div id="previewPanel" class="preview-popup"></div>
+
+<script>
+    // ======================= 1. 全局 IndexedDB 管理 (统一存储便签 + 文件) =======================
+    const DB_NAME = 'ToolHubDB';
+    const DB_VERSION = 2;
+    const NOTES_STORE = 'notes';
+    const FILES_STORE = 'files';
+
+    let db = null;
+
+    function openDB() {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open(DB_NAME, DB_VERSION);
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => {
+                db = request.result;
+                resolve(db);
+            };
+            request.onupgradeneeded = (event) => {
+                const database = event.target.result;
+                if (!database.objectStoreNames.contains(NOTES_STORE)) {
+                    const noteStore = database.createObjectStore(NOTES_STORE, { keyPath: 'id', autoIncrement: true });
+                    noteStore.createIndex('updatedAt', 'updatedAt');
+                }
+                if (!database.objectStoreNames.contains(FILES_STORE)) {
+                    const fileStore = database.createObjectStore(FILES_STORE, { keyPath: 'id', autoIncrement: true });
+                    fileStore.createIndex('uploadTime', 'uploadTime');
+                }
+            };
+        });
+    }
+
+    // ----- 便签 CRUD -----
+    async function getAllNotes() {
+        const transaction = db.transaction([NOTES_STORE], 'readonly');
+        const store = transaction.objectStore(NOTES_STORE);
+        const notes = await new Promise((resolve) => {
+            const req = store.getAll();
+            req.onsuccess = () => resolve(req.result);
+        });
+        return notes.sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    }
+    async function addNote(note) {
+        const transaction = db.transaction([NOTES_STORE], 'readwrite');
+        const store = transaction.objectStore(NOTES_STORE);
+        return new Promise((resolve) => {
+            const req = store.add(note);
+            req.onsuccess = () => resolve(req.result);
+        });
+    }
+    async function deleteNoteById(id) {
+        const transaction = db.transaction([NOTES_STORE], 'readwrite');
+        const store = transaction.objectStore(NOTES_STORE);
+        return new Promise((resolve) => {
+            const req = store.delete(id);
+            req.onsuccess = () => resolve();
+        });
+    }
+
+    // ----- 文件 CRUD (存储 ArrayBuffer)-----
+    async function getAllFiles() {
+        const transaction = db.transaction([FILES_STORE], 'readonly');
+        const store = transaction.objectStore(FILES_STORE);
+        const files = await new Promise((resolve) => {
+            const req = store.getAll();
+            req.onsuccess = () => resolve(req.result);
+        });
+        return files.sort((a,b) => new Date(b.uploadTime) - new Date(a.uploadTime));
+    }
+    async function saveFile(fileObj) {
+        const transaction = db.transaction([FILES_STORE], 'readwrite');
+        const store = transaction.objectStore(FILES_STORE);
+        return new Promise((resolve) => {
+            const req = store.add(fileObj);
+            req.onsuccess = () => resolve(req.result);
+        });
+    }
+    async function deleteFileById(id) {
+        const transaction = db.transaction([FILES_STORE], 'readwrite');
+        const store = transaction.objectStore(FILES_STORE);
+        return new Promise((resolve) => {
+            const req = store.delete(id);
+            req.onsuccess = () => resolve();
+        });
+    }
+    async function batchDeleteFiles(ids) {
+        for(let id of ids) await deleteFileById(id);
+    }
+    async function getFileById(id) {
+        const transaction = db.transaction([FILES_STORE], 'readonly');
+        const store = transaction.objectStore(FILES_STORE);
+        return new Promise((resolve) => {
+            const req = store.get(id);
+            req.onsuccess = () => resolve(req.result);
+        });
+    }
+
+    // ======================= 2. 云标签管理 UI 逻辑 =======================
+    let currentNotes = [];
+    function formatDate(dateStr) {
+        let d = new Date(dateStr);
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+    }
+    async function renderNotes() {
+        currentNotes = await getAllNotes();
+        const container = document.getElementById('notesList');
+        if(!container) return;
+        if(currentNotes.length === 0) {
+            container.innerHTML = '<div class="empty-notes">✨ 暂无便签，点击上方新建～</div>';
+            return;
+        }
+        container.innerHTML = currentNotes.map(note => `
+            <li class="note-item">
+                <div class="note-title"><strong>📌 ${escapeHtml(note.title)}</strong> <span style="font-size:0.7rem; background:#eef2f8; padding:2px 10px; border-radius:30px;">#${note.id}</span></div>
+                <div class="note-preview">${escapeHtml(note.content.substring(0, 100))}${note.content.length>100?'...':''}</div>
+                <div class="note-meta">🕘 ${formatDate(note.updatedAt)}</div>
+                <div class="note-actions">
+                    <button class="detail-btn" data-id="${note.id}">🔍 查看详情</button>
+                    <button class="delete-note-btn" data-id="${note.id}">🗑️ 删除</button>
+                </div>
+            </li>
+        `).join('');
+        // 绑定详情与删除
+        document.querySelectorAll('.detail-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const id = Number(btn.dataset.id);
+                const note = currentNotes.find(n => n.id === id);
+                if(note) alert(`【${note.title}】\n\n${note.content}`);
+            });
+        });
+        document.querySelectorAll('.delete-note-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const id = Number(btn.dataset.id);
+                if(confirm('删除便签？不可恢复')) {
+                    await deleteNoteById(id);
+                    await renderNotes();
+                    showToast('便签已删除');
+                }
+            });
+        });
+    }
+    async function addNewNote() {
+        const title = document.getElementById('noteTitle').value.trim();
+        const content = document.getElementById('noteContent').value.trim();
+        if(!title || !content) { showToast('标题和内容都不能为空', 'error'); return; }
+        const newNote = {
+            title, content,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        await addNote(newNote);
+        document.getElementById('noteTitle').value = '';
+        document.getElementById('noteContent').value = '';
+        await renderNotes();
+        showToast('便签已保存');
+    }
+
+    // ======================= 3. 文件传输管理 UI 逻辑 =======================
+    let fileList = [];
+    let selectedFileIds = new Set();
+
+    function formatSize(bytes) {
+        if(bytes < 1024) return bytes + ' B';
+        if(bytes < 1024*1024) return (bytes/1024).toFixed(2)+' KB';
+        return (bytes/(1024*1024)).toFixed(2)+' MB';
+    }
+    async function loadFilesUI() {
+        fileList = await getAllFiles();
+        renderFileList();
+    }
+    function renderFileList() {
+        const container = document.getElementById('fileListContainer');
+        if(!container) return;
+        if(fileList.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:48px;color:#8aa2bc;">📭 暂无文件，请上传～</div>';
+        } else {
+            container.innerHTML = fileList.map(file => `
+                <li class="file-item" data-id="${file.id}" data-name="${escapeHtml(file.originalName)}">
+                    <input type="checkbox" class="file-check" value="${file.id}" ${selectedFileIds.has(file.id) ? 'checked' : ''} onchange="toggleFileSelection(${file.id}, this.checked)">
+                    <div class="file-info">
+                        <div class="file-name">${escapeHtml(file.originalName)}</div>
+                        <div class="file-meta">📦 ${formatSize(file.fileSize)} · 🕒 ${formatDate(file.uploadTime)}</div>
+                    </div>
+                    <div>
+                        <button class="small-btn" onclick="downloadSingleFile(${file.id})">⬇️ 下载</button>
+                        <button class="small-btn delete-btn" onclick="deleteSingleFile(${file.id})">删除</button>
+                    </div>
+                </li>
+            `).join('');
+        }
+        updateSelectionUI();
+        attachFilePreview();
+    }
+    function updateSelectionUI() {
+        const badge = document.getElementById('selectionCountBadge');
+        const clearBtn = document.getElementById('clearSelectionBtn');
+        const batchDownload = document.getElementById('batchDownloadBtn');
+        const batchDelete = document.getElementById('batchDeleteBtn');
+        const selectAllChk = document.getElementById('selectAllCheckbox');
+        const cnt = selectedFileIds.size;
+        if(cnt > 0) {
+            badge.style.display = 'inline-block';
+            badge.innerText = `已选 ${cnt} 项`;
+            clearBtn.classList.add('show');
+            batchDownload.classList.add('show');
+            batchDelete.classList.add('show');
+        } else {
+            badge.style.display = 'none';
+            clearBtn.classList.remove('show');
+            batchDownload.classList.remove('show');
+            batchDelete.classList.remove('show');
+        }
+        if(selectAllChk) {
+            selectAllChk.checked = (cnt === fileList.length && fileList.length > 0);
+            selectAllChk.indeterminate = (cnt > 0 && cnt < fileList.length);
+        }
+    }
+    window.toggleFileSelection = function(id, checked) {
+        if(checked) selectedFileIds.add(id);
+        else selectedFileIds.delete(id);
+        renderFileList();
+    };
+    function toggleSelectAll() {
+        if(selectedFileIds.size === fileList.length && fileList.length > 0) selectedFileIds.clear();
+        else fileList.forEach(f => selectedFileIds.add(f.id));
+        renderFileList();
+    }
+    window.clearSelection = function() { selectedFileIds.clear(); renderFileList(); };
+    window.deleteSingleFile = async function(id) {
+        if(confirm('永久删除文件？')) {
+            await deleteFileById(id);
+            selectedFileIds.delete(id);
+            await loadFilesUI();
+            showToast('文件已删除');
+        }
+    };
+    async function batchDelete() {
+        if(selectedFileIds.size === 0) { showToast('请先选择文件'); return; }
+        if(confirm(`删除 ${selectedFileIds.size} 个文件？`)) {
+            await batchDeleteFiles(Array.from(selectedFileIds));
+            selectedFileIds.clear();
+            await loadFilesUI();
+            showToast('批量删除完成');
+        }
+    }
+    window.downloadSingleFile = async function(id) {
+        const file = await getFileById(id);
+        if(file && file.fileData) {
+            const blob = new Blob([file.fileData], {type: file.fileType || 'application/octet-stream'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = file.originalName;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast(`下载: ${file.originalName}`);
+        }
+    };
+    async function batchDownload() {
+        if(selectedFileIds.size === 0) { showToast('请先选择文件'); return; }
+        if(typeof JSZip === 'undefined') { showToast('加载打包组件失败'); return; }
+        showToast('正在打包...');
+        const zip = new JSZip();
+        for(let id of selectedFileIds) {
+            const file = await getFileById(id);
+            if(file && file.fileData) zip.file(file.originalName, file.fileData);
+        }
+        const content = await zip.generateAsync({type: 'blob'});
+        const url = URL.createObjectURL(content);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `batch_${new Date().toISOString().slice(0,19)}.zip`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('打包完成');
+    }
+    // 上传逻辑
+    let pendingFiles = [];
+    function updateSelectedChips(files) {
+        const box = document.getElementById('selectedBox');
+        const chipsDiv = document.getElementById('fileChips');
+        if(files.length === 0) { box.style.display = 'none'; return; }
+        box.style.display = 'block';
+        chipsDiv.innerHTML = '';
+        Array.from(files).forEach(f => {
+            let chip = document.createElement('span');
+            chip.className = 'chip';
+            chip.innerText = `${f.name} (${formatSize(f.size)})`;
+            chipsDiv.appendChild(chip);
+        });
+    }
+    async function uploadPendingFiles() {
+        if(pendingFiles.length === 0) { showToast('请选择文件'); return; }
+        let success = 0;
+        for(let file of pendingFiles) {
+            const reader = new FileReader();
+            const fileData = await new Promise(resolve => {
+                reader.onload = e => resolve(e.target.result);
+                reader.readAsArrayBuffer(file);
+            });
+            await saveFile({
+                originalName: file.name,
+                fileSize: file.size,
+                fileType: file.type,
+                uploadTime: new Date().toISOString(),
+                fileData: fileData
+            });
+            success++;
+        }
+        await loadFilesUI();
+        document.getElementById('multiFileInput').value = '';
+        pendingFiles = [];
+        updateSelectedChips([]);
+        showToast(`成功上传 ${success} 个文件`);
+    }
+
+    // 预览悬浮
+    let previewTimer;
+    function attachFilePreview() {
+        document.querySelectorAll('.file-item').forEach(item => {
+            item.removeEventListener('mouseenter', onFilePreviewEnter);
+            item.removeEventListener('mouseleave', onFilePreviewLeave);
+            item.addEventListener('mouseenter', onFilePreviewEnter);
+            item.addEventListener('mouseleave', onFilePreviewLeave);
+        });
+    }
+    async function onFilePreviewEnter(e) {
+        clearTimeout(previewTimer);
+        const item = e.currentTarget;
+        const id = Number(item.querySelector('.file-check')?.value);
+        if(!id) return;
+        const file = await getFileById(id);
+        if(!file) return;
+        const ext = file.originalName.split('.').pop().toLowerCase();
+        const isImg = ['jpg','jpeg','png','gif','webp','svg'].includes(ext);
+        const panel = document.getElementById('previewPanel');
+        if(isImg && file.fileData) {
+            const blob = new Blob([file.fileData], {type: file.fileType});
+            const url = URL.createObjectURL(blob);
+            panel.innerHTML = `<img src="${url}" style="max-width:260px; max-height:180px; border-radius:12px;">`;
+            setTimeout(()=>URL.revokeObjectURL(url), 2000);
+        } else {
+            panel.innerHTML = `<div style="padding:8px;">📄 ${escapeHtml(file.originalName)}<br>大小: ${formatSize(file.fileSize)}</div>`;
+        }
+        panel.style.display = 'block';
+        updatePreviewPos(e);
+    }
+    function onFilePreviewLeave() { previewTimer = setTimeout(()=>{ document.getElementById('previewPanel').style.display='none'; }, 100); }
+    function updatePreviewPos(e) { let panel = document.getElementById('previewPanel'); panel.style.left = (e.clientX+15)+'px'; panel.style.top = (e.clientY+15)+'px'; }
+
+    // 公用
+    function escapeHtml(str) { return String(str).replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'})[m]); }
+    function showToast(msg) { let t = document.getElementById('toastMsg'); t.innerText = msg; t.style.display='block'; setTimeout(()=>{ t.style.display='none'; }, 2000); }
+
+    // ======================= 4. 工具切换 & 初始化 =======================
+    function switchTool(toolId) {
+        document.querySelectorAll('.tool-panel').forEach(panel => panel.classList.remove('active-panel'));
+        if(toolId === 'notes') document.getElementById('notesPanel').classList.add('active-panel');
+        else document.getElementById('filesPanel').classList.add('active-panel');
+        document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelector(`.tool-btn[data-tool="${toolId}"]`).classList.add('active');
+        if(toolId === 'files') loadFilesUI();
+        else renderNotes();
+    }
+    async function init() {
+        await openDB();
+        // 绑定UI事件
+        document.getElementById('saveNoteBtn')?.addEventListener('click', addNewNote);
+        document.getElementById('startUploadBtn')?.addEventListener('click', uploadPendingFiles);
+        document.getElementById('multiFileInput')?.addEventListener('change', (e) => { pendingFiles = Array.from(e.target.files); updateSelectedChips(pendingFiles); });
+        const drag = document.getElementById('dragArea');
+        if(drag) {
+            drag.addEventListener('click', () => document.getElementById('multiFileInput').click());
+            drag.addEventListener('dragover', e => e.preventDefault());
+            drag.addEventListener('dragenter', () => drag.classList.add('dragover'));
+            drag.addEventListener('dragleave', () => drag.classList.remove('dragover'));
+            drag.addEventListener('drop', (e) => {
+                e.preventDefault();
+                drag.classList.remove('dragover');
+                pendingFiles = Array.from(e.dataTransfer.files);
+                updateSelectedChips(pendingFiles);
+                document.getElementById('multiFileInput').files = e.dataTransfer.files;
+            });
+        }
+        document.getElementById('selectAllCheckbox')?.addEventListener('change', toggleSelectAll);
+        document.getElementById('clearSelectionBtn')?.addEventListener('click', () => { selectedFileIds.clear(); renderFileList(); });
+        document.getElementById('batchDownloadBtn')?.addEventListener('click', batchDownload);
+        document.getElementById('batchDeleteBtn')?.addEventListener('click', batchDelete);
+        document.querySelectorAll('.tool-btn').forEach(btn => {
+            btn.addEventListener('click', () => switchTool(btn.dataset.tool));
+        });
+        await renderNotes();
+        await loadFilesUI();
+        showToast('工具集已加载，数据永久保存');
+    }
+    init();
+</script>
+</body>
+</html>
