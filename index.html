@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>跨设备云标签 & 文件传输助手</title>
+    <title>工具集 · 云标签 & 文件传输</title>
     <style>
         * {
             margin: 0;
@@ -23,7 +23,6 @@
             margin: 0 auto;
         }
 
-        /* 工具导航 */
         .tools-nav {
             background: white;
             border-radius: 60px;
@@ -82,7 +81,6 @@
             to { opacity: 1; transform: translateY(0);}
         }
 
-        /* 云标签卡片 */
         .create-card, .upload-card {
             background: white;
             border-radius: 28px;
@@ -186,7 +184,6 @@
             padding: 48px 20px;
             color: #90a9c2;
         }
-        /* 文件区域 */
         .drag-area {
             border: 2px dashed #cbdde9;
             background: #fafdff;
@@ -303,17 +300,8 @@
             pointer-events: none;
             font-size: 0.75rem;
         }
-        /* 移动端优化 */
-        @media (max-width: 650px) {
-            .tools-nav { flex-direction: column; align-items: stretch; border-radius: 28px; }
-            .tool-buttons { justify-content: center; }
-            .btn-save, .btn-primary { width: 100%; }
-            .file-item { flex-direction: column; align-items: flex-start; }
-            .small-btn { margin-top: 6px; }
-        }
-        /* 数据同步提示区 */
         .sync-bar {
-            background: #eef3fc;
+            background: #fef5e7;
             border-radius: 20px;
             padding: 12px 20px;
             margin-bottom: 20px;
@@ -323,6 +311,7 @@
             align-items: center;
             gap: 12px;
             font-size: 0.8rem;
+            border-left: 4px solid #f5a623;
         }
         .sync-btn {
             background: #ffffffcc;
@@ -331,6 +320,16 @@
             padding: 6px 16px;
             cursor: pointer;
             font-weight: 500;
+            transition: 0.2s;
+        }
+        .sync-btn:active { background: #e9ecef; }
+        @media (max-width: 650px) {
+            .tools-nav { flex-direction: column; align-items: stretch; border-radius: 28px; }
+            .tool-buttons { justify-content: center; }
+            .btn-save, .btn-primary { width: 100%; }
+            .file-item { flex-direction: column; align-items: flex-start; }
+            .small-btn { margin-top: 6px; }
+            .sync-bar { flex-direction: column; align-items: stretch; text-align: center; }
         }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -345,10 +344,10 @@
         </div>
     </div>
 
-    <!-- 数据同步提示条 (解决设备A/B数据不同步: 手动导入导出) -->
-    <div class="sync-bar" id="syncBar" style="background:#fef5e7; border-left: 4px solid #f5a623;">
-        <span>💡 跨设备同步: 在设备A点击「导出数据」→ 传输文件/文本到设备B → 点击「导入数据」即可合并。</span>
-        <div style="display: flex; gap: 10px;">
+    <!-- 跨设备同步提示条 -->
+    <div class="sync-bar">
+        <span>💡 跨设备同步: 在设备A点击「导出数据」→ 传输文件到设备B → 点击「导入数据」即可合并。</span>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
             <button id="exportAllDataBtn" class="sync-btn">📤 导出数据 (备份)</button>
             <label class="sync-btn" style="background:white; cursor:pointer;">📥 导入数据恢复
                 <input type="file" id="importFileInput" accept=".json" style="display: none;">
@@ -385,10 +384,13 @@
                 <p style="font-size:0.75rem; margin-top:6px;">支持多文件 · 数据保存在浏览器中</p>
             </div>
             <div style="display: flex; gap:12px; flex-wrap:wrap; margin-bottom:16px;">
-                <button class="btn-primary" id="selectFileBtn" style="background:#eef3fc; color:#2c6e8f;">📎 选择文件</button>
+                <!-- 修复：使用真实按钮 + 独立隐藏input，确保移动端点击有效 -->
+                <button class="btn-primary" id="selectFileBtn" style="background:#eef3fc; color:#2c6e8f; border:1px solid #cbdde9;">📎 选择文件</button>
                 <button class="btn-primary" id="startUploadBtn">🚀 开始上传</button>
             </div>
-            <div id="selectedBox" style="display:none; background:#f8fafd; border-radius:20px; padding:12px;">
+            <!-- 隐藏的file input，支持多选 -->
+            <input type="file" id="multiFileInput" multiple style="display: none;">
+            <div id="selectedBox" style="display:none; background:#f8fafd; border-radius:20px; padding:12px; margin-top:12px;">
                 <strong>已选择文件：</strong>
                 <div class="file-chips" id="fileChips"></div>
             </div>
@@ -414,7 +416,7 @@
 <script>
     // ======================= 全局 IndexedDB =======================
     const DB_NAME = 'ToolHubDB';
-    const DB_VERSION = 3;      // 版本升级，确保store稳定
+    const DB_VERSION = 3;
     const NOTES_STORE = 'notes';
     const FILES_STORE = 'files';
 
@@ -469,7 +471,7 @@
         });
     }
 
-    // 文件操作 (支持ArrayBuffer)
+    // 文件操作
     async function getAllFiles() {
         const transaction = db.transaction([FILES_STORE], 'readonly');
         const store = transaction.objectStore(FILES_STORE);
@@ -507,8 +509,7 @@
         });
     }
 
-    // ========= 云标签 UI =========
-    let currentNotes = [];
+    // 辅助函数
     function formatDate(dateStr) {
         let d = new Date(dateStr);
         return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
@@ -522,15 +523,16 @@
         setTimeout(()=>{ t.style.display='none'; t.style.background = '#1f5e7e'; }, 2200); 
     }
 
+    // ========= 云标签 UI =========
     async function renderNotes() {
-        currentNotes = await getAllNotes();
+        const notes = await getAllNotes();
         const container = document.getElementById('notesList');
         if(!container) return;
-        if(currentNotes.length === 0) {
+        if(notes.length === 0) {
             container.innerHTML = '<div class="empty-notes">✨ 暂无便签，点击上方新建～</div>';
             return;
         }
-        container.innerHTML = currentNotes.map(note => `
+        container.innerHTML = notes.map(note => `
             <li class="note-item">
                 <div class="note-title"><strong>📌 ${escapeHtml(note.title)}</strong> <span style="font-size:0.7rem;">#${note.id}</span></div>
                 <div class="note-preview">${escapeHtml(note.content.substring(0, 100))}${note.content.length>100?'...':''}</div>
@@ -544,7 +546,7 @@
         document.querySelectorAll('.detail-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const id = Number(btn.dataset.id);
-                const note = currentNotes.find(n => n.id === id);
+                const note = notes.find(n => n.id === id);
                 if(note) alert(`【${note.title}】\n\n${note.content}`);
             });
         });
@@ -563,22 +565,17 @@
         const title = document.getElementById('noteTitle').value.trim();
         const content = document.getElementById('noteContent').value.trim();
         if(!title || !content) { showToast('标题和内容都不能为空', true); return; }
-        const newNote = {
-            title, content,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        };
-        await addNote(newNote);
+        await addNote({ title, content, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
         document.getElementById('noteTitle').value = '';
         document.getElementById('noteContent').value = '';
         await renderNotes();
         showToast('便签已保存');
     }
 
-    // ========= 文件传输 UI (修复手机端点击没反应) =========
+    // ========= 文件传输 UI (修复选择文件无反应) =========
     let fileList = [];
     let selectedFileIds = new Set();
-    let pendingFiles = [];      // 待上传的文件对象
+    let pendingFiles = [];
 
     function formatSize(bytes) {
         if(bytes < 1024) return bytes + ' B';
@@ -706,10 +703,34 @@
         showToast('打包完成');
     }
 
-    // 修复手机端上传没反应: 独立选择文件按钮 + 确保input click触发
-    function triggerFileSelect() {
+    // 关键修复：让“选择文件”按钮可靠触发 file input
+    function initFileSelection() {
+        const selectBtn = document.getElementById('selectFileBtn');
         const fileInput = document.getElementById('multiFileInput');
-        if(fileInput) fileInput.click();
+        if (!selectBtn || !fileInput) return;
+        
+        // 移除可能残留的监听，重新绑定
+        const newBtn = selectBtn.cloneNode(true);
+        selectBtn.parentNode.replaceChild(newBtn, selectBtn);
+        const finalBtn = document.getElementById('selectFileBtn');
+        
+        finalBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // 直接触发隐藏的 file input
+            fileInput.click();
+        });
+        
+        // 文件选择变化时更新待上传列表
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files && e.target.files.length > 0) {
+                pendingFiles = Array.from(e.target.files);
+                updateSelectedChips(pendingFiles);
+            } else {
+                pendingFiles = [];
+                updateSelectedChips([]);
+            }
+        });
     }
 
     function updateSelectedChips(files) {
@@ -718,7 +739,7 @@
         if(!files || files.length === 0) { box.style.display = 'none'; return; }
         box.style.display = 'block';
         chipsDiv.innerHTML = '';
-        Array.from(files).forEach(f => {
+        files.forEach(f => {
             let chip = document.createElement('span');
             chip.className = 'chip';
             chip.innerText = `${f.name} (${formatSize(f.size)})`;
@@ -788,11 +809,10 @@
     function onFilePreviewLeave() { previewTimer = setTimeout(()=>{ document.getElementById('previewPanel').style.display='none'; }, 100); }
     function updatePreviewPos(e) { let panel = document.getElementById('previewPanel'); panel.style.left = (e.clientX+15)+'px'; panel.style.top = (e.clientY+15)+'px'; }
 
-    // ========= 跨设备导入导出 (解决设备A上传B看不到) =========
+    // 跨设备导入导出
     async function exportAllData() {
         const notes = await getAllNotes();
         const filesMeta = await getAllFiles();
-        // 由于文件包含ArrayBuffer，不能直接JSON，转换成base64用于导出
         const filesWithBase64 = [];
         for(let f of filesMeta) {
             let base64 = '';
@@ -804,7 +824,6 @@
                 base64 = btoa(binary);
             }
             filesWithBase64.push({
-                id: f.id,
                 originalName: f.originalName,
                 fileSize: f.fileSize,
                 fileType: f.fileType,
@@ -821,31 +840,27 @@
         a.download = `toolhub_backup_${new Date().toISOString().slice(0,19)}.json`;
         a.click();
         URL.revokeObjectURL(url);
-        showToast('数据已导出 (包含图片/文件)');
+        showToast('数据已导出');
     }
 
     async function importDataFromFile(file) {
         const text = await file.text();
         const data = JSON.parse(text);
         if(!data.notes && !data.files) throw new Error('格式错误');
-        // 导入便签 (去重策略: 保留全部, 简单合并)
         const txNotes = db.transaction([NOTES_STORE], 'readwrite');
         const noteStore = txNotes.objectStore(NOTES_STORE);
         for(let note of data.notes) {
             if(note.title && note.content) {
-                const newNote = { title: note.title, content: note.content, createdAt: note.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
-                await noteStore.add(newNote);
+                await noteStore.add({ title: note.title, content: note.content, createdAt: note.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() });
             }
         }
-        // 导入文件 (还原ArrayBuffer)
         const txFiles = db.transaction([FILES_STORE], 'readwrite');
         const fileStore = txFiles.objectStore(FILES_STORE);
         for(let f of data.files) {
             if(f.fileDataBase64 && f.originalName) {
                 const binaryStr = atob(f.fileDataBase64);
-                const len = binaryStr.length;
-                const bytes = new Uint8Array(len);
-                for(let i=0; i<len; i++) bytes[i] = binaryStr.charCodeAt(i);
+                const bytes = new Uint8Array(binaryStr.length);
+                for(let i=0; i<binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
                 await fileStore.add({
                     originalName: f.originalName,
                     fileSize: f.fileSize,
@@ -860,10 +875,63 @@
         await loadFilesUI();
     }
 
-    // ========= 初始化及事件绑定 =========
+    // 工具切换 & 初始化
     function switchTool(toolId) {
         document.querySelectorAll('.tool-panel').forEach(panel => panel.classList.remove('active-panel'));
         if(toolId === 'notes') document.getElementById('notesPanel').classList.add('active-panel');
         else document.getElementById('filesPanel').classList.add('active-panel');
         document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
-       
+        document.querySelector(`.tool-btn[data-tool="${toolId}"]`).classList.add('active');
+        if(toolId === 'files') loadFilesUI();
+        else renderNotes();
+    }
+
+    async function init() {
+        await openDB();
+        // 绑定UI事件
+        document.getElementById('saveNoteBtn')?.addEventListener('click', addNewNote);
+        document.getElementById('startUploadBtn')?.addEventListener('click', uploadPendingFiles);
+        document.getElementById('selectAllCheckbox')?.addEventListener('change', toggleSelectAll);
+        document.getElementById('clearSelectionBtn')?.addEventListener('click', () => { selectedFileIds.clear(); renderFileList(); });
+        document.getElementById('batchDownloadBtn')?.addEventListener('click', batchDownload);
+        document.getElementById('batchDeleteBtn')?.addEventListener('click', batchDelete);
+        document.getElementById('exportAllDataBtn')?.addEventListener('click', exportAllData);
+        const importInput = document.getElementById('importFileInput');
+        if(importInput) {
+            importInput.addEventListener('change', async (e) => {
+                if(e.target.files.length) await importDataFromFile(e.target.files[0]);
+                importInput.value = '';
+            });
+        }
+        // 拖拽上传
+        const drag = document.getElementById('dragArea');
+        if(drag) {
+            drag.addEventListener('click', () => document.getElementById('multiFileInput')?.click());
+            drag.addEventListener('dragover', e => e.preventDefault());
+            drag.addEventListener('dragenter', () => drag.classList.add('dragover'));
+            drag.addEventListener('dragleave', () => drag.classList.remove('dragover'));
+            drag.addEventListener('drop', (e) => {
+                e.preventDefault();
+                drag.classList.remove('dragover');
+                if(e.dataTransfer.files.length) {
+                    pendingFiles = Array.from(e.dataTransfer.files);
+                    updateSelectedChips(pendingFiles);
+                    const fileInput = document.getElementById('multiFileInput');
+                    if(fileInput) fileInput.files = e.dataTransfer.files;
+                }
+            });
+        }
+        // 关键修复：单独初始化选择文件按钮
+        initFileSelection();
+        
+        document.querySelectorAll('.tool-btn').forEach(btn => {
+            btn.addEventListener('click', () => switchTool(btn.dataset.tool));
+        });
+        await renderNotes();
+        await loadFilesUI();
+        showToast('工具已加载，支持跨设备导入导出');
+    }
+    init();
+</script>
+</body>
+</html>
