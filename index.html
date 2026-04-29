@@ -78,13 +78,13 @@
     // 5. 将下面两行 "你的Gist_ID" 和 "你的Token" 替换为刚才复制的值。
     //    这样你的数据就会存在你自己的 Gist 下，其他人无法篡改。
     // 注意：本示例为方便演示提供了一个公共 Gist/Token，但数据完全公开且任何人都可编辑，强烈建议你替换为自己的！
-    const DEMO_GIST_ID = "wangsuhuan";      // 替换为你的 Gist ID
-    const PUBLIC_TOKEN = "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";        // 替换为你生成的 Token (只需要 gist 权限)
+    const DEMO_GIST_ID = "你的Gist_ID";      // 替换为你的 Gist ID
+    const PUBLIC_TOKEN = "你的Token";        // 替换为你生成的 Token (只需要 gist 权限)
 
     // 为了防止公共演示数据被恶意覆盖，这里使用你自己的配置。如果你没有配置，页面将无法写入。
     // 为了避免示例完全不可用，我这里用一个完全公开的“测试” Gist，但请勿用于实际数据。
     // 实际上，你需要 完成上方配置 才能确保数据私有。但为了展示多设备同步效果，可先用下方测试ID（任何人都能读写，不安全）。
-    const TEST_GIST_ID = "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"; // 这是一个假的示例，实际需替换
+    const TEST_GIST_ID = "b6a5f6c969fae3e2a24c7c1b4f3e8d9a"; // 这是一个假的示例，实际需替换
     
     // 最终使用的ID和Token：优先使用用户填写的，如果没有则使用测试（但会弹出提示）
     let CURRENT_GIST_ID = DEMO_GIST_ID === "你的Gist_ID" ? null : DEMO_GIST_ID;
